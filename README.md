@@ -11,16 +11,16 @@ Simple ruuvi tag scanner for polybar usage.
 Use choosenim or other method to get nim up and running.
 Compile and install gattlib.
 
-Clone and compile ruuvitag.nim:
+Clone and compile project with nimble:
 ```
-nim -c -d:release ruuvitag.nim
+nimble build
 ```
 
 Adjust your own tag macs in to the code before compiling.
 
 # Known issues
 
-* Polybar is locked for the whole time script is running. Scan time can be adjusted by adjusting const variable scan_time
+* Polybar is locked for the whole time script is running. Scan time can be adjusted by -s parameter
 * Made for my own usage to learn how to generate wrapers to C-libraries with c2nim and to learn nim.
 * Almost no error handling
 * For some reason it takes a really long time to get data from all the tags. My android phone gets updates atleast once a second but it takes much longer with this app.

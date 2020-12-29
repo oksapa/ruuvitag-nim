@@ -1,7 +1,10 @@
+# Based on gattlib example https://github.com/labapart/gattlib/blob/master/examples/advertisement_data/advertisement_data.c
+# Simple mostly hard coded simple gadget to get temperature information for specific tags to polybar
+
 import gattlib
 import strformat
+import argparse
 
-const scan_time: csize_t = 60 #Scan time in seconds
 
 type
     RuuviTag = object
@@ -55,27 +58,44 @@ proc ble_advertising_device (adapter: pointer; address: cstring; name: cstring; 
                 if parse_ruuvi_data(i, data, manufacturer_data_size.int):
                     i.found = true
 
-        #for i in countup(0, manufacturer_data_size.int):
-        #    stdout.write(&"{data[i]:02x} ")
-        #for (size_t i = 0; i < manufacturer_data_size; i++) {
-        #    echo("%02x ", manufacturer_data[i])
-        #}
-    #echo("\n")
-
 when isMainModule:
     var adapter: pointer
     var ret: cint
+    var timeout: int = 60
+
+    var p = newParser:
+        help("Ruuvitag temperature polybar script")
+        option("-s", "--scan-time", default=some("60"), help = "How long to scan (seconds)")
+
+    try:
+        let opts = p.parse(commandLineParams())
+        try:
+            timeout = parseInt(opts.scan_time)
+            if timeout < 1:
+                raise newException(ValueError, "Value must be larger than 0")
+        except ValueError:
+            stderr.writeLine "Scan time must be int and bigger than 0"
+            stderr.writeLine getCurrentExceptionMsg()
+            quit(1)
+    except ShortCircuit as e:
+        if e.flag == "argparse_help":
+            echo p.help
+        quit(1)
+    except UsageError:
+        stderr.writeLine getCurrentExceptionMsg()
+        quit(1)
+
 
     ret = gattlib_adapter_open(nil, addr adapter)
     if ret != 0:
         echo("Error")
     ret = gattlib_adapter_scan_enable_with_filter(adapter,
-             nil, #/* Do not filter on any specific Service UUID */
+             nil, # Do not filter on any specific Service UUID
              0, #/* RSSI Threshold */,
-             GATTLIB_DISCOVER_FILTER_NOTIFY_CHANGE, #/* Notify change of advertising data/RSSI */
+             GATTLIB_DISCOVER_FILTER_NOTIFY_CHANGE, # Notify change of advertising data/RSSI 
              ble_advertising_device,
-             scan_time, #/* timeout=0 means infinite loop */
-             nil) #/* user_data */);
+             timeout.csize_t, # timeout=0 means infinite loop
+             nil) # user_data
     if ret != 0:
         echo("Error")
     discard gattlib_adapter_close(adapter)
@@ -83,7 +103,7 @@ when isMainModule:
     stdout.write("| ")
     for tag in tags:
         if tag.found:
-            stdout.write(&"{tag.name} / {tag.temperature}℃ | ")
+            stdout.write(&"{tag.name} / {tag.temperature:.2f}℃ | ")
         else:
-            stdout.write(&"{tag.name} N/A")
+            stdout.write(&"{tag.name} / N/A")
     echo("")
